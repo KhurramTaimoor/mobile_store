@@ -1,0 +1,99 @@
+<?php 
+$brands = isset($_GET['b']) ? json_decode(urldecode($_GET['b'])) : array();
+?>
+<section class="py-0">
+    <div class="container-fluid">
+    <div class="row">
+                
+            <div class="container px-4 px-lg-5 mt-5">
+                <div class="row gx-4 gx-lg-4 row-cols-md-3 row-cols-xl-4 ">
+                    <?php 
+                        $where = "";
+                        if(count($brands)>0)
+                        $where = " and p.brand_id in (".implode(",",$brands).") " ;
+                        $products = $conn->query("SELECT p.*,b.name as bname FROM `products` p inner join brands b on p.brand_id = b.id where p.status = 1 {$where} order by rand() ");
+                        while($row = $products->fetch_assoc()):
+                            $upload_path = base_app.'/uploads/product_'.$row['id'];
+                            $img = "";
+                            if(is_dir($upload_path)){
+                                $fileO = scandir($upload_path);
+                                if(isset($fileO[2]))
+                                    $img = "uploads/product_".$row['id']."/".$fileO[2];
+                                // var_dump($fileO);
+                            }
+                            foreach($row as $k=> $v){
+                                $row[$k] = trim(stripslashes($v));
+                            }
+                            $inventory = $conn->query("SELECT * FROM inventory where product_id = ".$row['id']);
+                            $inv = array();
+                            while($ir = $inventory->fetch_assoc()){
+                                $inv[] = number_format($ir['price']);
+                            }
+                    ?>
+                    <div class="col mb-5">
+                        <a class="card product-item text-dark" href=".?p=view_product&id=<?php echo md5($row['id']) ?>">
+                            <!-- Product image-->
+                            <img class="card-img-top w-100 book-cover" src="<?php echo validate_image($img) ?>" alt="..." />
+                            <!-- Product details-->
+                            <div class="card-body p-4">
+                                <div class="">
+                                    <!-- Product name-->
+                                    <h5 class="fw-bolder"><?php echo $row['name'] ?></h5>
+                                    <!-- Product price-->
+                                    <?php foreach($inv as $k=> $v): ?>
+                                        <span><b>Price: </b><?php echo $v ?></span>
+                                    <?php endforeach; ?>
+                                </div>
+                                <p class="m-0"><small>Brand: <?php echo $row['bname'] ?></small></p>
+                            </div>
+                        </a>
+                    </div>
+                    <?php endwhile; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+</section>
+<script>
+    function _filter(){
+        var brands = []
+            $('.brand-item:checked').each(function(){
+                brands.push($(this).val())
+            })
+        _b = JSON.stringify(brands)
+        var checked = $('.brand-item:checked').length
+        var total = $('.brand-item').length
+        if(checked == total)
+            location.href="./?";
+        else
+            location.href="./?b="+encodeURI(_b);
+    }
+    function check_filter(){
+        var checked = $('.brand-item:checked').length
+        var total = $('.brand-item').length
+        if(checked == total){
+            $('#brandAll').attr('checked',true)
+        }else{
+            $('#brandAll').attr('checked',false)
+        }
+        if('<?php echo isset($_GET['b']) ?>' == '')
+            $('#brandAll,.brand-item').attr('checked',true)
+    }
+    $(function(){
+        check_filter()
+        $('#brandAll').change(function(){
+            if($(this).is(':checked') == true){
+                $('.brand-item').attr('checked',true)
+            }else{
+                $('.brand-item').attr('checked',false)
+            }
+            _filter()
+        })
+        $('.brand-item').change(function(){
+            _filter()
+        })
+    })
+
+</script>
